@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DGIC 4.0 — Live Vote Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  :root {
+    --navy: #050A14;
+    --gold: #F5A623;
+    --teal: #00D4AA;
+    --warm-white: #F0EDE8;
+    --surface: #0D1622;
+    --border: rgba(245,166,35,0.15);
+    --text-muted: rgba(240,237,232,0.5);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--navy); color: var(--warm-white); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Header */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; flex-direction: column; }
+  .brand-eyebrow { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .brand-title { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+  .status-pill.live { background: rgba(0,212,170,0.12); color: var(--teal); border: 1px solid rgba(0,212,170,0.3); }
+  .status-pill.locked { background: rgba(240,237,232,0.06); color: var(--text-muted); border: 1px solid rgba(240,237,232,0.1); }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+  .status-pill.locked .pulse { background: var(--text-muted); animation: none; }
+
+  #countdown-header { font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700; color: var(--teal); letter-spacing: 0.06em; transition: color 0.3s; }
+  #countdown-header.urgent { color: #FF4D4D; }
+  #countdown-header.locked { color: var(--text-muted); font-size: 18px; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+  .stat { flex: 1; padding: 14px 24px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat-value { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--warm-white); }
+  .stat-value.gold { color: var(--gold); }
+  .stat-value.teal { color: var(--teal); }
+
+  /* Main chart area */
+  main { flex: 1; padding: 28px 32px; }
+  .chart-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  .chart-title { font-size: 16px; font-weight: 600; color: var(--warm-white); }
+  .last-update { font-size: 11px; color: var(--text-muted); }
+
+  .chart-container { display: flex; flex-direction: column; gap: 14px; }
+
+  .bar-row { display: flex; align-items: center; gap: 14px; }
+  .bar-rank { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); width: 20px; text-align: right; flex-shrink: 0; }
+  .bar-rank.first { color: var(--gold); font-weight: 700; }
+  .bar-label { font-size: 13px; font-weight: 500; width: 120px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: rgba(240,237,232,0.05); border-radius: 4px; height: 36px; position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); background: linear-gradient(90deg, rgba(0,212,170,0.7), rgba(0,212,170,0.4)); min-width: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
+  .bar-fill.leading { background: linear-gradient(90deg, var(--gold), rgba(245,166,35,0.7)); }
+  .bar-fill.zero { background: transparent; }
+  .bar-count { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .bar-count.zero { color: var(--text-muted); position: absolute; right: 10px; }
+  .bar-pct { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-muted); width: 44px; text-align: right; flex-shrink: 0; }
+
+  /* Final results overlay */
+  .final-banner { display: none; background: linear-gradient(135deg, rgba(245,166,35,0.1), rgba(0,212,170,0.05)); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 24px; margin-bottom: 24px; display: none; align-items: center; gap: 16px; }
+  .final-banner.visible { display: flex; }
+  .final-banner-icon { font-size: 28px; }
+  .final-banner-text h3 { font-size: 16px; font-weight: 700; color: var(--gold); }
+  .final-banner-text p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  footer { padding: 16px 32px; text-align: center; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="brand-eyebrow">NUESA UNIBEN · Grand Finale · July 10, 2026</span>
+    <span class="brand-title">DGIC 4.0 — Audience Vote</span>
+  </div>
+  <div class="header-right">
+    <div class="status-pill live" id="status-pill">
+      <span class="pulse" id="status-dot"></span>
+      <span id="status-text">Live</span>
+    </div>
+    <div id="countdown-header">--:--:--</div>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-label">Total Votes</span>
+    <span class="stat-value gold" id="total-votes">0</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Leading Team</span>
+    <span class="stat-value teal" id="leading-team">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Registered Voters</span>
+    <span class="stat-value" id="registered-count">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Participation</span>
+    <span class="stat-value" id="participation-pct">—</span>
+  </div>
+</div>
+
+<main>
+  <div class="final-banner" id="final-banner">
+    <span class="final-banner-icon">🏆</span>
+    <div class="final-banner-text">
+      <h3>Final Results</h3>
+      <p>Voting has closed. These are the official audience vote results.</p>
+    </div>
+  </div>
+
+  <div class="chart-header">
+    <span class="chart-title">Votes by Team</span>
+    <span class="last-update" id="last-update">Updating…</span>
+  </div>
+
+  <div class="chart-container" id="chart-container">
+    <!-- Populated by JS -->
+  </div>
+</main>
+
+<footer>NUESA UNIBEN · Daddy G.O Innovation Challenge 4.0 · Dashboard auto-refreshes every 4 seconds</footer>
+
+<script>
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const TEAMS = [
+  'Team 1','Team 2','Team 3','Team 4','Team 5',
+  'Team 6','Team 7','Team 8','Team 9','Team 10'
+];
+
+let votingOpen = true, countdownInterval = null, pollInterval = null;
+let voteCounts = {};
+TEAMS.forEach(t => voteCounts[t] = 0);
+
+window.addEventListener('DOMContentLoaded', () => {
+  buildChart();
+  poll();
+  pollInterval = setInterval(poll, 4000);
+});
+
+function buildChart() {
+  document.getElementById('chart-container').innerHTML = TEAMS.map((name, i) => `
+    <div class="bar-row" id="row-${i}">
+      <span class="bar-rank" id="rank-${i}">${i+1}</span>
+      <span class="bar-label" title="${name}">${name}</span>
+      <div class="bar-track">
+        <div class="bar-fill zero" id="fill-${i}" style="width:0%">
+          <span class="bar-count zero" id="count-${i}">0</span>
+        </div>
+      </div>
+      <span class="bar-pct" id="pct-${i}">0%</span>
+    </div>`).join('');
+}
+
+async function poll() {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getVoteCounts`);
+    const data = await res.json();
+    if (data.locked !== undefined) handleStatus(data.locked);
+    if (data.counts) updateChart(data.counts);
+    if (data.endTime && votingOpen) startCountdown(data.endTime);
+    if (data.registered) {
+      document.getElementById('registered-count').textContent = data.registered;
+      const total = Object.values(data.counts || {}).reduce((a,b)=>a+b,0);
+      const pct = data.registered > 0 ? Math.round(total/data.registered*100) : 0;
+      document.getElementById('participation-pct').textContent = pct + '%';
+    }
+    document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('last-update').textContent = 'Reconnecting…';
+  }
+}
+
+function handleStatus(locked) {
+  if (locked && votingOpen) {
+    votingOpen = false;
+    if (countdownInterval) clearInterval(countdownInterval);
+    const cd = document.getElementById('countdown-header');
+    cd.textContent = 'CLOSED'; cd.className = 'locked';
+    const pill = document.getElementById('status-pill');
+    pill.className = 'status-pill locked';
+    document.getElementById('status-dot').style.animation = 'none';
+    document.getElementById('status-text').textContent = 'Voting Closed';
+    document.getElementById('final-banner').classList.add('visible');
+  }
+}
+
+function updateChart(counts) {
+  TEAMS.forEach(t => { if (counts[t] !== undefined) voteCounts[t] = counts[t]; });
+  const total = Object.values(voteCounts).reduce((a,b)=>a+b,0);
+  const max = Math.max(...Object.values(voteCounts), 1);
+  const sorted = [...TEAMS].sort((a,b) => voteCounts[b]-voteCounts[a]);
+  const leader = sorted[0];
+
+  document.getElementById('total-votes').textContent = total;
+  document.getElementById('leading-team').textContent = voteCounts[leader] > 0 ? leader : '—';
+
+  TEAMS.forEach((name, i) => {
+    const count = voteCounts[name] || 0;
+    const pct = total > 0 ? Math.round(count/total*100) : 0;
+    const barPct = max > 0 ? Math.round(count/max*100) : 0;
+    const isLeader = name === leader && count > 0;
+    const rank = sorted.indexOf(name) + 1;
+
+    const fill = document.getElementById(`fill-${i}`);
+    const countEl = document.getElementById(`count-${i}`);
+    const pctEl = document.getElementById(`pct-${i}`);
+    const rankEl = document.getElementById(`rank-${i}`);
+
+    fill.style.width = barPct + '%';
+    fill.className = 'bar-fill' + (count === 0 ? ' zero' : '') + (isLeader ? ' leading' : '');
+    countEl.textContent = count;
+    countEl.className = 'bar-count' + (count === 0 ? ' zero' : '');
+    pctEl.textContent = pct + '%';
+    rankEl.textContent = rank;
+    rankEl.className = 'bar-rank' + (rank === 1 && count > 0 ? ' first' : '');
+  });
+}
+
+function startCountdown(endTimeMs) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  tick(endTimeMs);
+  countdownInterval = setInterval(() => tick(endTimeMs), 1000);
+}
+
+function tick(endTimeMs) {
+  const remaining = endTimeMs - Date.now();
+  const el = document.getElementById('countdown-header');
+  if (remaining <= 0) { el.textContent = '00:00:00'; return; }
+  const h = Math.floor(remaining/3600000), m = Math.floor((remaining%3600000)/60000), s = Math.floor((remaining%60000)/1000);
+  el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  el.classList.toggle('urgent', remaining < 120000);
+  el.classList.remove('locked');
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+</script>
+</body>
+</html>
