@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGIC 4.0 — Live Vote Dashboard</title>
+<title>DGIC 4.0 — Audience Vote</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   :root {
@@ -13,235 +13,428 @@
     --warm-white: #F0EDE8;
     --surface: #0D1622;
     --border: rgba(245,166,35,0.15);
-    --text-muted: rgba(240,237,232,0.5);
+    --muted: rgba(240,237,232,0.5);
+    --red: #FF4D4D;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--navy); color: var(--warm-white); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--navy); color:var(--warm-white); font-family:'Space Grotesk',sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
 
-  /* Header */
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
-  .header-left { display: flex; flex-direction: column; }
-  .brand-eyebrow { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
-  .brand-title { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; }
-  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .status-pill { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
-  .status-pill.live { background: rgba(0,212,170,0.12); color: var(--teal); border: 1px solid rgba(0,212,170,0.3); }
-  .status-pill.locked { background: rgba(240,237,232,0.06); color: var(--text-muted); border: 1px solid rgba(240,237,232,0.1); }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-  .status-pill.locked .pulse { background: var(--text-muted); animation: none; }
+  header { width:100%; background:var(--surface); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .brand-title { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--gold); letter-spacing:.08em; text-transform:uppercase; }
+  .brand-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  #cd-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:2px; text-align:right; }
+  #cd { font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:var(--teal); transition:color .3s; }
+  #cd.urgent { color:var(--red); }
+  #cd.locked { color:var(--muted); font-size:13px; }
 
-  #countdown-header { font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700; color: var(--teal); letter-spacing: 0.06em; transition: color 0.3s; }
-  #countdown-header.urgent { color: #FF4D4D; }
-  #countdown-header.locked { color: var(--text-muted); font-size: 18px; }
+  main { width:100%; max-width:540px; padding:24px 18px 60px; }
 
-  /* Stats bar */
-  .stats-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
-  .stat { flex: 1; padding: 14px 24px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border); }
-  .stat:last-child { border-right: none; }
-  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
-  .stat-value { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--warm-white); }
-  .stat-value.gold { color: var(--gold); }
-  .stat-value.teal { color: var(--teal); }
+  /* sections */
+  .section { display:none; }
+  .section.active { display:block; }
 
-  /* Main chart area */
-  main { flex: 1; padding: 28px 32px; }
-  .chart-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
-  .chart-title { font-size: 16px; font-weight: 600; color: var(--warm-white); }
-  .last-update { font-size: 11px; color: var(--text-muted); }
+  .eyebrow { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:16px; }
 
-  .chart-container { display: flex; flex-direction: column; gap: 14px; }
+  /* auth card */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px 20px; }
+  .card h2 { font-size:20px; font-weight:700; margin-bottom:8px; }
+  .card p { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:20px; }
+  .field-label { display:block; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
+  input[type=text] { width:100%; background:var(--navy); border:1.5px solid rgba(245,166,35,.25); border-radius:8px; padding:13px 15px; font-family:'Space Mono',monospace; font-size:15px; color:var(--warm-white); letter-spacing:.06em; outline:none; transition:border-color .2s; text-transform:uppercase; }
+  input[type=text]::placeholder { color:rgba(240,237,232,.2); text-transform:none; }
+  input[type=text]:focus { border-color:var(--gold); }
+  .err { font-size:12px; color:#FF6B6B; margin-top:7px; display:none; }
+  .err.on { display:block; }
 
-  .bar-row { display: flex; align-items: center; gap: 14px; }
-  .bar-rank { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); width: 20px; text-align: right; flex-shrink: 0; }
-  .bar-rank.first { color: var(--gold); font-weight: 700; }
-  .bar-label { font-size: 13px; font-weight: 500; width: 120px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bar-track { flex: 1; background: rgba(240,237,232,0.05); border-radius: 4px; height: 36px; position: relative; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); background: linear-gradient(90deg, rgba(0,212,170,0.7), rgba(0,212,170,0.4)); min-width: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
-  .bar-fill.leading { background: linear-gradient(90deg, var(--gold), rgba(245,166,35,0.7)); }
-  .bar-fill.zero { background: transparent; }
-  .bar-count { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--navy); white-space: nowrap; }
-  .bar-count.zero { color: var(--text-muted); position: absolute; right: 10px; }
-  .bar-pct { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-muted); width: 44px; text-align: right; flex-shrink: 0; }
+  .btn { width:100%; margin-top:18px; padding:14px; background:var(--gold); color:var(--navy); border:none; border-radius:8px; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s; }
+  .btn:hover { opacity:.9; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn.teal { background:var(--teal); }
 
-  /* Final results overlay */
-  .final-banner { display: none; background: linear-gradient(135deg, rgba(245,166,35,0.1), rgba(0,212,170,0.05)); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 24px; margin-bottom: 24px; display: none; align-items: center; gap: 16px; }
-  .final-banner.visible { display: flex; }
-  .final-banner-icon { font-size: 28px; }
-  .final-banner-text h3 { font-size: 16px; font-weight: 700; color: var(--gold); }
-  .final-banner-text p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  /* voter badge */
+  .badge { display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 15px; margin-bottom:18px; }
+  .badge-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); flex-shrink:0; }
+  .badge-name { font-size:13px; flex:1; }
+  .badge-ticket { font-family:'Space Mono',monospace; font-size:12px; color:var(--gold); font-weight:700; }
 
-  footer { padding: 16px 32px; text-align: center; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); }
+  /* position tabs */
+  .pos-tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .pos-tab { flex:1; padding:12px 8px; border-radius:8px; border:1.5px solid rgba(240,237,232,.1); background:transparent; color:var(--muted); font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; text-align:center; }
+  .pos-tab.active { border-color:var(--gold); background:rgba(245,166,35,.08); color:var(--warm-white); }
+  .pos-tab.done { border-color:var(--teal); color:var(--teal); }
+  .pos-tab .tab-icon { font-size:16px; display:block; margin-bottom:3px; }
+  .pos-tab .tab-label { font-size:11px; display:block; }
+  .pos-tab .tab-team { font-size:10px; color:var(--teal); display:none; margin-top:2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pos-tab.done .tab-team { display:block; }
+
+  /* instruction */
+  .instruction { font-size:13px; color:var(--muted); margin-bottom:16px; padding:10px 14px; background:rgba(245,166,35,.05); border-radius:6px; border-left:3px solid var(--gold); line-height:1.5; }
+  .instruction strong { color:var(--warm-white); }
+
+  /* team list */
+  .team-list { display:flex; flex-direction:column; gap:9px; margin-bottom:20px; }
+  .team-opt { cursor:pointer; }
+  .team-opt input[type=radio] { position:absolute; opacity:0; width:0; height:0; }
+  .team-card { display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid rgba(240,237,232,.08); border-radius:9px; padding:14px 16px; transition:all .2s; }
+  .team-opt input:checked + .team-card { border-color:var(--gold); background:rgba(245,166,35,.07); }
+  .team-card:hover { border-color:rgba(245,166,35,.35); }
+  .team-card.taken { opacity:.35; pointer-events:none; }
+  .team-num { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); width:22px; flex-shrink:0; }
+  .team-opt input:checked + .team-card .team-num { color:var(--gold); }
+  .team-name-txt { font-size:14px; font-weight:600; flex:1; }
+  .team-taken-tag { font-size:10px; color:var(--muted); font-style:italic; }
+  .team-check { width:19px; height:19px; border-radius:50%; border:2px solid rgba(240,237,232,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; }
+  .team-opt input:checked + .team-card .team-check { background:var(--gold); border-color:var(--gold); }
+  .team-check-dot { width:6px; height:6px; border-radius:50%; background:var(--navy); display:none; }
+  .team-opt input:checked + .team-card .team-check-dot { display:block; }
+
+  /* summary */
+  .summary { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px 16px; margin-bottom:20px; }
+  .summary h3 { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px; }
+  .summary-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(240,237,232,.06); }
+  .summary-row:last-child { border-bottom:none; }
+  .summary-pos { font-family:'Space Mono',monospace; font-size:11px; font-weight:700; width:60px; flex-shrink:0; }
+  .summary-pos.p1 { color:var(--gold); }
+  .summary-pos.p2 { color:#C0C0C0; }
+  .summary-pos.p3 { color:#CD7F32; }
+  .summary-team { font-size:13px; font-weight:600; flex:1; }
+  .summary-pts { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); }
+  .empty-slot { font-size:13px; color:var(--muted); font-style:italic; }
+
+  .feedback { font-size:12px; color:var(--teal); text-align:center; margin-top:8px; min-height:18px; display:none; }
+  .feedback.on { display:block; }
+  .feedback.err { color:#FF6B6B; }
+
+  /* locked */
+  .locked-card { background:var(--surface); border:1px solid rgba(240,237,232,.08); border-radius:12px; padding:40px 24px; text-align:center; }
+  .locked-icon { font-size:40px; margin-bottom:14px; }
+  .locked-card h2 { font-size:20px; font-weight:700; margin-bottom:8px; }
+  .locked-card p { font-size:13px; color:var(--muted); line-height:1.6; }
+  .dash-link { display:inline-block; margin-top:20px; padding:11px 26px; background:var(--teal); color:var(--navy); border-radius:8px; font-weight:700; font-size:13px; text-decoration:none; }
+
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(5,10,20,.3); border-top-color:var(--navy); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  footer { margin-top:auto; padding:18px; text-align:center; font-size:11px; color:var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <div class="header-left">
-    <span class="brand-eyebrow">NUESA UNIBEN · Grand Finale · July 10, 2026</span>
-    <span class="brand-title">DGIC 4.0 — Audience Vote</span>
+  <div>
+    <div class="brand-title">DGIC 4.0</div>
+    <div class="brand-sub">Audience Vote · Grand Finale</div>
   </div>
-  <div class="header-right">
-    <div class="status-pill live" id="status-pill">
-      <span class="pulse" id="status-dot"></span>
-      <span id="status-text">Live</span>
-    </div>
-    <div id="countdown-header">--:--:--</div>
+  <div>
+    <div id="cd-label">Voting closes in</div>
+    <div id="cd">--:--:--</div>
   </div>
 </header>
 
-<div class="stats-bar">
-  <div class="stat">
-    <span class="stat-label">Total Votes</span>
-    <span class="stat-value gold" id="total-votes">0</span>
-  </div>
-  <div class="stat">
-    <span class="stat-label">Leading Team</span>
-    <span class="stat-value teal" id="leading-team">—</span>
-  </div>
-  <div class="stat">
-    <span class="stat-label">Registered Voters</span>
-    <span class="stat-value" id="registered-count">—</span>
-  </div>
-  <div class="stat">
-    <span class="stat-label">Participation</span>
-    <span class="stat-value" id="participation-pct">—</span>
-  </div>
-</div>
-
 <main>
-  <div class="final-banner" id="final-banner">
-    <span class="final-banner-icon">🏆</span>
-    <div class="final-banner-text">
-      <h3>Final Results</h3>
-      <p>Voting has closed. These are the official audience vote results.</p>
+  <!-- AUTH -->
+  <div id="s-auth" class="section active">
+    <p class="eyebrow">Verify your ticket</p>
+    <div class="card">
+      <h2>Cast your vote</h2>
+      <p>Enter your ticket ID from your registration confirmation email. You can update your votes any time before the countdown ends.</p>
+      <label class="field-label" for="ticket-input">Ticket ID</label>
+      <input type="text" id="ticket-input" placeholder="e.g. DGIC4-0137-A3F9" maxlength="20" autocomplete="off" />
+      <div class="err" id="auth-err"></div>
+      <button class="btn" id="verify-btn" onclick="verifyTicket()">Verify & Continue</button>
     </div>
   </div>
 
-  <div class="chart-header">
-    <span class="chart-title">Votes by Team</span>
-    <span class="last-update" id="last-update">Updating…</span>
+  <!-- VOTE -->
+  <div id="s-vote" class="section">
+    <p class="eyebrow">Your ballot</p>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span class="badge-name" id="voter-name">—</span>
+      <span class="badge-ticket" id="voter-ticket">—</span>
+    </div>
+
+    <!-- Position tabs -->
+    <div class="pos-tabs">
+      <button class="pos-tab active" id="tab-1" onclick="switchTab(1)">
+        <span class="tab-icon">🥇</span>
+        <span class="tab-label">1st Place</span>
+        <span class="tab-team" id="tab1-team"></span>
+      </button>
+      <button class="pos-tab" id="tab-2" onclick="switchTab(2)">
+        <span class="tab-icon">🥈</span>
+        <span class="tab-label">2nd Place</span>
+        <span class="tab-team" id="tab2-team"></span>
+      </button>
+      <button class="pos-tab" id="tab-3" onclick="switchTab(3)">
+        <span class="tab-icon">🥉</span>
+        <span class="tab-label">3rd Place</span>
+        <span class="tab-team" id="tab3-team"></span>
+      </button>
+    </div>
+
+    <div class="instruction" id="vote-instruction">
+      Select the team you want to award <strong>1st Place</strong> to.
+    </div>
+
+    <div class="team-list" id="team-list"></div>
+
+    <!-- Running summary -->
+    <div class="summary">
+      <h3>Your current selections</h3>
+      <div class="summary-row">
+        <span class="summary-pos p1">🥇 1st</span>
+        <span class="summary-team" id="sum-1"><span class="empty-slot">Not selected</span></span>
+        <span class="summary-pts">3 pts</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-pos p2">🥈 2nd</span>
+        <span class="summary-team" id="sum-2"><span class="empty-slot">Not selected</span></span>
+        <span class="summary-pts">2 pts</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-pos p3">🥉 3rd</span>
+        <span class="summary-team" id="sum-3"><span class="empty-slot">Not selected</span></span>
+        <span class="summary-pts">1 pt</span>
+      </div>
+    </div>
+
+    <button class="btn" id="submit-btn" onclick="submitVotes()" disabled>Submit All 3 Votes</button>
+    <div class="feedback" id="vote-feedback"></div>
   </div>
 
-  <div class="chart-container" id="chart-container">
-    <!-- Populated by JS -->
+  <!-- LOCKED -->
+  <div id="s-locked" class="section">
+    <div class="locked-card">
+      <div class="locked-icon">🔒</div>
+      <h2>Voting is closed</h2>
+      <p>The voting window has ended. Results are now being tallied on the main screen.</p>
+      <a href="dgic4-dashboard.html" class="dash-link">View Results →</a>
+    </div>
   </div>
 </main>
 
-<footer>NUESA UNIBEN · Daddy G.O Innovation Challenge 4.0 · Dashboard auto-refreshes every 4 seconds</footer>
+<footer>NUESA UNIBEN · Daddy G.O Innovation Challenge 4.0 · July 10, 2026</footer>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiuQQXQbvbh-kskU7HfN23WEW2ZVRu3ENwVNyo0v_SaYZWcdXOasmuePfTKggTrX2Kgg/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymXFEIU0cHhdHdDqNZGbb1CzhCwhmE1eKjKNrQY8raUbjP3XBNTv3koa5JkILElCpHCA/exec';
+
 const TEAMS = [
-  'Team 1','Team 2','Team 3','Team 4','Team 5',
-  'Team 6','Team 7','Team 8','Team 9','Team 10'
+  'Team Placeholder 1','Team Placeholder 2','Team Placeholder 3',
+  'Team Placeholder 4','Team Placeholder 5','Team Placeholder 6',
+  'Team Placeholder 7','Team Placeholder 8','Team Placeholder 9',
+  'Team Placeholder 10'
 ];
 
-let votingOpen = true, countdownInterval = null, pollInterval = null;
-let voteCounts = {};
-TEAMS.forEach(t => voteCounts[t] = 0);
+// State
+let voterTicket = null, voterName = null;
+let picks = { 1: null, 2: null, 3: null }; // position → team name
+let activeTab = 1;
+let votingOpen = true, cdInterval = null;
 
+const INSTRUCTIONS = {
+  1: 'Select the team you want to award <strong>1st Place</strong> to.',
+  2: 'Select the team you want to award <strong>2nd Place</strong> to.',
+  3: 'Select the team you want to award <strong>3rd Place</strong> to.'
+};
+
+// ── Init
 window.addEventListener('DOMContentLoaded', () => {
-  buildChart();
-  poll();
-  pollInterval = setInterval(poll, 4000);
+  buildTeamList();
+  startPolling();
+  document.getElementById('ticket-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') verifyTicket();
+  });
 });
 
-function buildChart() {
-  document.getElementById('chart-container').innerHTML = TEAMS.map((name, i) => `
-    <div class="bar-row" id="row-${i}">
-      <span class="bar-rank" id="rank-${i}">${i+1}</span>
-      <span class="bar-label" title="${name}">${name}</span>
-      <div class="bar-track">
-        <div class="bar-fill zero" id="fill-${i}" style="width:0%">
-          <span class="bar-count zero" id="count-${i}">0</span>
-        </div>
+// ── Team list builder
+function buildTeamList() {
+  document.getElementById('team-list').innerHTML = TEAMS.map((name, i) => `
+    <label class="team-opt" id="opt-${i}">
+      <input type="radio" name="team-pick" value="${name}" onchange="onPick('${name}')">
+      <div class="team-card" id="card-${i}">
+        <span class="team-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="team-name-txt">${name}</span>
+        <span class="team-taken-tag" id="taken-${i}"></span>
+        <span class="team-check"><span class="team-check-dot"></span></span>
       </div>
-      <span class="bar-pct" id="pct-${i}">0%</span>
-    </div>`).join('');
+    </label>`).join('');
 }
 
-async function poll() {
+// ── Polling
+function startPolling() { fetchStatus(); setInterval(fetchStatus, 5000); }
+async function fetchStatus() {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getVoteCounts`);
-    const data = await res.json();
-    if (data.locked !== undefined) handleStatus(data.locked);
-    if (data.counts) updateChart(data.counts);
-    if (data.endTime && votingOpen) startCountdown(data.endTime);
-    if (data.registered) {
-      document.getElementById('registered-count').textContent = data.registered;
-      const total = Object.values(data.counts || {}).reduce((a,b)=>a+b,0);
-      const pct = data.registered > 0 ? Math.round(total/data.registered*100) : 0;
-      document.getElementById('participation-pct').textContent = pct + '%';
-    }
-    document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById('last-update').textContent = 'Reconnecting…';
-  }
+    const r = await fetch(`${APPS_SCRIPT_URL}?action=getStatus`);
+    const d = await r.json();
+    if (d.locked) { lockUI(); return; }
+    votingOpen = true;
+    if (d.endTime) startCountdown(d.endTime);
+  } catch(e) {}
 }
 
-function handleStatus(locked) {
-  if (locked && votingOpen) {
-    votingOpen = false;
-    if (countdownInterval) clearInterval(countdownInterval);
-    const cd = document.getElementById('countdown-header');
-    cd.textContent = 'CLOSED'; cd.className = 'locked';
-    const pill = document.getElementById('status-pill');
-    pill.className = 'status-pill locked';
-    document.getElementById('status-dot').style.animation = 'none';
-    document.getElementById('status-text').textContent = 'Voting Closed';
-    document.getElementById('final-banner').classList.add('visible');
-  }
+// ── Countdown
+function startCountdown(ms) {
+  if (cdInterval) clearInterval(cdInterval);
+  tick(ms); cdInterval = setInterval(() => tick(ms), 1000);
+}
+function tick(ms) {
+  const rem = ms - Date.now();
+  const el = document.getElementById('cd');
+  if (rem <= 0) { el.textContent='00:00:00'; lockUI(); return; }
+  const h=Math.floor(rem/3600000), m=Math.floor((rem%3600000)/60000), s=Math.floor((rem%60000)/1000);
+  el.textContent=`${p(h)}:${p(m)}:${p(s)}`;
+  el.classList.toggle('urgent', rem < 120000);
+  el.classList.remove('locked');
+}
+function p(n) { return String(n).padStart(2,'0'); }
+
+function lockUI() {
+  votingOpen = false;
+  if (cdInterval) clearInterval(cdInterval);
+  const el = document.getElementById('cd');
+  el.textContent = 'CLOSED'; el.className = 'locked';
+  document.getElementById('cd-label').textContent = 'Voting';
+  ['s-auth','s-vote'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('s-locked').classList.add('active');
 }
 
-function updateChart(counts) {
-  TEAMS.forEach(t => { if (counts[t] !== undefined) voteCounts[t] = counts[t]; });
-  const total = Object.values(voteCounts).reduce((a,b)=>a+b,0);
-  const max = Math.max(...Object.values(voteCounts), 1);
-  const sorted = [...TEAMS].sort((a,b) => voteCounts[b]-voteCounts[a]);
-  const leader = sorted[0];
+// ── Verify ticket
+async function verifyTicket() {
+  if (!votingOpen) { lockUI(); return; }
+  const ticket = document.getElementById('ticket-input').value.trim().toUpperCase();
+  const errEl = document.getElementById('auth-err');
+  const btn = document.getElementById('verify-btn');
+  if (!ticket) { showErr(errEl,'Please enter your ticket ID.'); return; }
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Verifying…'; errEl.classList.remove('on');
+  try {
+    const r = await fetch(`${APPS_SCRIPT_URL}?action=validateTicket&ticketId=${encodeURIComponent(ticket)}`);
+    const d = await r.json();
+    if (d.valid) {
+      voterTicket=ticket; voterName=d.name||ticket;
+      // Restore previous picks if they exist
+      if (d.currentVotes) {
+        if (d.currentVotes.first)  picks[1] = d.currentVotes.first;
+        if (d.currentVotes.second) picks[2] = d.currentVotes.second;
+        if (d.currentVotes.third)  picks[3] = d.currentVotes.third;
+      }
+      enterVoteSection();
+    } else { showErr(errEl, d.message||'Ticket ID not found. Check your registration email.'); }
+  } catch(e) { showErr(errEl,'Connection error. Please try again.'); }
+  finally { btn.disabled=false; btn.innerHTML='Verify & Continue'; }
+}
+function showErr(el,msg) { el.textContent=msg; el.classList.add('on'); }
 
-  document.getElementById('total-votes').textContent = total;
-  document.getElementById('leading-team').textContent = voteCounts[leader] > 0 ? leader : '—';
+// ── Enter vote section
+function enterVoteSection() {
+  document.getElementById('s-auth').classList.remove('active');
+  document.getElementById('s-vote').classList.add('active');
+  document.getElementById('voter-name').textContent = voterName;
+  document.getElementById('voter-ticket').textContent = voterTicket;
+  refreshUI();
+}
 
+// ── Tab switching
+function switchTab(pos) {
+  activeTab = pos;
+  document.querySelectorAll('.pos-tab').forEach((t,i) => {
+    t.classList.toggle('active', i+1 === pos);
+  });
+  document.getElementById('vote-instruction').innerHTML = INSTRUCTIONS[pos];
+  refreshTeamList();
+}
+
+// ── Team pick
+function onPick(teamName) {
+  // If this team is already picked in another position, clear that position
+  [1,2,3].forEach(pos => { if (picks[pos] === teamName && pos !== activeTab) picks[pos] = null; });
+  picks[activeTab] = teamName;
+  refreshUI();
+}
+
+// ── Refresh all UI
+function refreshUI() {
+  refreshTeamList();
+  refreshSummary();
+  refreshTabs();
+  // Enable submit only when all 3 positions filled
+  const allFilled = picks[1] && picks[2] && picks[3];
+  document.getElementById('submit-btn').disabled = !allFilled;
+  document.getElementById('submit-btn').textContent = allFilled
+    ? 'Submit All 3 Votes'
+    : `Submit (${[picks[1],picks[2],picks[3]].filter(Boolean).length}/3 selected)`;
+}
+
+function refreshTeamList() {
   TEAMS.forEach((name, i) => {
-    const count = voteCounts[name] || 0;
-    const pct = total > 0 ? Math.round(count/total*100) : 0;
-    const barPct = max > 0 ? Math.round(count/max*100) : 0;
-    const isLeader = name === leader && count > 0;
-    const rank = sorted.indexOf(name) + 1;
-
-    const fill = document.getElementById(`fill-${i}`);
-    const countEl = document.getElementById(`count-${i}`);
-    const pctEl = document.getElementById(`pct-${i}`);
-    const rankEl = document.getElementById(`rank-${i}`);
-
-    fill.style.width = barPct + '%';
-    fill.className = 'bar-fill' + (count === 0 ? ' zero' : '') + (isLeader ? ' leading' : '');
-    countEl.textContent = count;
-    countEl.className = 'bar-count' + (count === 0 ? ' zero' : '');
-    pctEl.textContent = pct + '%';
-    rankEl.textContent = rank;
-    rankEl.className = 'bar-rank' + (rank === 1 && count > 0 ? ' first' : '');
+    const card = document.getElementById(`card-${i}`);
+    const radio = document.querySelector(`input[value="${name}"]`);
+    const takenEl = document.getElementById(`taken-${i}`);
+    // Is this team picked in a different position?
+    const takenInPos = [1,2,3].find(pos => picks[pos] === name && pos !== activeTab);
+    const isCurrentPick = picks[activeTab] === name;
+    if (takenInPos) {
+      card.classList.add('taken');
+      const labels = {1:'your 1st',2:'your 2nd',3:'your 3rd'};
+      takenEl.textContent = `(${labels[takenInPos]} pick)`;
+    } else {
+      card.classList.remove('taken');
+      takenEl.textContent = '';
+    }
+    if (radio) radio.checked = isCurrentPick;
   });
 }
 
-function startCountdown(endTimeMs) {
-  if (countdownInterval) clearInterval(countdownInterval);
-  tick(endTimeMs);
-  countdownInterval = setInterval(() => tick(endTimeMs), 1000);
+function refreshSummary() {
+  [1,2,3].forEach(pos => {
+    const el = document.getElementById(`sum-${pos}`);
+    el.innerHTML = picks[pos]
+      ? `<strong>${picks[pos]}</strong>`
+      : '<span class="empty-slot">Not selected</span>';
+  });
 }
 
-function tick(endTimeMs) {
-  const remaining = endTimeMs - Date.now();
-  const el = document.getElementById('countdown-header');
-  if (remaining <= 0) { el.textContent = '00:00:00'; return; }
-  const h = Math.floor(remaining/3600000), m = Math.floor((remaining%3600000)/60000), s = Math.floor((remaining%60000)/1000);
-  el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-  el.classList.toggle('urgent', remaining < 120000);
-  el.classList.remove('locked');
+function refreshTabs() {
+  [1,2,3].forEach(pos => {
+    const tab = document.getElementById(`tab-${pos}`);
+    const teamEl = document.getElementById(`tab${pos}-team`);
+    if (picks[pos]) {
+      tab.classList.add('done');
+      teamEl.textContent = picks[pos];
+    } else {
+      tab.classList.remove('done');
+      teamEl.textContent = '';
+    }
+  });
 }
 
-function pad(n) { return String(n).padStart(2,'0'); }
+// ── Submit
+async function submitVotes() {
+  if (!votingOpen) { lockUI(); return; }
+  if (!picks[1]||!picks[2]||!picks[3]) return;
+  const btn = document.getElementById('submit-btn');
+  const fb = document.getElementById('vote-feedback');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Submitting…'; fb.classList.remove('on');
+  try {
+    const url = `${APPS_SCRIPT_URL}?action=submitVote`
+      +`&ticketId=${encodeURIComponent(voterTicket)}`
+      +`&first=${encodeURIComponent(picks[1])}`
+      +`&second=${encodeURIComponent(picks[2])}`
+      +`&third=${encodeURIComponent(picks[3])}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.success) {
+      fb.textContent='Votes submitted ✓  You can still change them before time runs out.';
+      fb.className='feedback on';
+    } else {
+      fb.textContent = d.message||'Something went wrong. Try again.';
+      fb.className='feedback on err';
+    }
+  } catch(e) {
+    fb.textContent='Connection error. Try again.';
+    fb.className='feedback on err';
+  } finally {
+    btn.disabled=false; btn.innerHTML='Update Votes';
+  }
+}
 </script>
 </body>
 </html>
